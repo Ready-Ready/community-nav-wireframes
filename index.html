@@ -27,19 +27,25 @@
                 function buildHTML(obj, currentPath = '') {
                     let html = '';
                     for (const key in obj) {
-                        // FIX: Only hide the index.html that is in the ROOT, not subfolders
-                        if (currentPath === '' && key === 'index.html') continue;
-                        if (key === 'README.md' || key === 'INSTRUCTIONS.md') continue; 
+                        // Skip system files and the directory index itself
+                        if (key === 'index.html' && currentPath === '') continue;
+                        if (key === 'README.md' || key === 'INSTRUCTIONS.md' || key === '.gitignore') continue; 
                         
                         if (typeof obj[key] === 'string') {
+                            // It's a file
                             if(key.endsWith('.html')) {
-                                // Use the full path for the href
                                 html += `<div class="file">📄 <a href="${obj[key]}">${key}</a></div>`;
                             }
                         } else {
-                            html += `<details open>
-                                        <summary>📁 ${key}</summary>
-                                        ${buildHTML(obj[key], currentPath + key + '/') }
+                            // It's a folder
+                            const folderPath = currentPath + key + '/';
+                            html += `<details open style="margin-bottom: 5px;">
+                                        <summary>
+                                            📁 <a href="${folderPath}" style="font-weight: bold; color: #0176d3;">${key}</a>
+                                        </summary>
+                                        <div style="border-left: 1px solid #ddd; margin-left: 10px;">
+                                            ${buildHTML(obj[key], folderPath)}
+                                        </div>
                                      </details>`;
                         }
                     }
@@ -47,7 +53,7 @@
                 }
 
                 const finalHTML = buildHTML(fileStructure);
-                container.innerHTML = finalHTML.trim() === '' ? '<p>No HTML wireframes found.</p>' : finalHTML;
+                container.innerHTML = finalHTML.trim() === '' ? '<p>No wireframes found.</p>' : finalHTML;
 
             } catch (error) {
                 document.getElementById('tree-container').innerHTML = `<p style="color:red">Error: ${error.message}</p>`;

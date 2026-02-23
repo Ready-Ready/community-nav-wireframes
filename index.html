@@ -1,89 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wireframe Directory</title>
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            padding: 2rem; 
-            background-color: #f4f6f9;
-            color: #181818;
-        }
-        .container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 2rem; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-        }
-        h1 { border-bottom: 2px solid #e5e5e5; padding-bottom: 0.5rem; margin-top: 0; }
-        /* Native HTML collapsible styling */
-        details { margin-left: 1.5rem; margin-top: 0.5rem; }
-        summary { cursor: pointer; font-weight: bold; color: #0176d3; outline: none; padding: 4px; border-radius: 4px; }
-        summary:hover { background-color: #f3f3f3; }
-        .file { margin-left: 2rem; margin-top: 0.5rem; padding: 4px; }
-        a { color: #0b5cab; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .loading { color: #747474; font-style: italic; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📁 Project Wireframes</h1>
-        <div id="tree-container"><p class="loading">Scanning repository for files...</p></div>
-    </div>
-
-    <script>
-        // Your hardcoded GitHub details
+<script>
         const username = 'Ready-Ready';
         const repo = 'community-nav-wireframes';
-        const branch = 'main'; // Change to 'master' if that is your default branch
+        const branch = 'main'; 
 
         async function loadTree() {
             try {
-                // Fetch the live folder structure from GitHub
                 const response = await fetch(`https://api.github.com/repos/${username}/${repo}/git/trees/${branch}?recursive=1`);
                 const data = await response.json();
-                
                 if (!response.ok) throw new Error(data.message);
 
                 const container = document.getElementById('tree-container');
                 container.innerHTML = ''; 
 
-                // Build a nested folder structure from the flat list
                 const fileStructure = {};
                 data.tree.forEach(item => {
                     const parts = item.path.split('/');
                     let current = fileStructure;
                     for (let i = 0; i < parts.length; i++) {
                         if (!current[parts[i]]) {
-                            // If it's the last part and it's a file, save the path. Otherwise, make a folder {}.
                             current[parts[i]] = (i === parts.length - 1 && item.type === 'blob') ? item.path : {};
                         }
                         current = current[parts[i]];
                     }
                 });
 
-                // Convert the folder structure into HTML using native +/- <details> tags
-                function buildHTML(obj) {
+                function buildHTML(obj, currentPath = '') {
                     let html = '';
                     for (const key in obj) {
-                        // Hide this index page from the list so it doesn't link to itself
-                        if (key === 'index.html' || key === 'README.md') continue; 
+                        // FIX: Only hide the index.html that is in the ROOT, not subfolders
+                        if (currentPath === '' && key === 'index.html') continue;
+                        if (key === 'README.md' || key === 'INSTRUCTIONS.md') continue; 
                         
                         if (typeof obj[key] === 'string') {
-                            // It's a file - ONLY show .html files
                             if(key.endsWith('.html')) {
-                                html += `<div class="file">📄 <a href="${obj[key]}">${key.replace('.html', '')}</a></div>`;
+                                // Use the full path for the href
+                                html += `<div class="file">📄 <a href="${obj[key]}">${key}</a></div>`;
                             }
                         } else {
-                            // It's a folder
                             html += `<details open>
                                         <summary>📁 ${key}</summary>
-                                        ${buildHTML(obj[key])}
+                                        ${buildHTML(obj[key], currentPath + key + '/') }
                                      </details>`;
                         }
                     }
@@ -91,14 +47,11 @@
                 }
 
                 const finalHTML = buildHTML(fileStructure);
-                container.innerHTML = finalHTML.trim() === '' ? '<p>No HTML wireframes found yet.</p>' : finalHTML;
+                container.innerHTML = finalHTML.trim() === '' ? '<p>No HTML wireframes found.</p>' : finalHTML;
 
             } catch (error) {
-                document.getElementById('tree-container').innerHTML = `<p style="color:red">Error loading directory: Make sure your branch name (main vs master) is correct!</p>`;
+                document.getElementById('tree-container').innerHTML = `<p style="color:red">Error: ${error.message}</p>`;
             }
         }
-
         loadTree();
     </script>
-</body>
-</html>

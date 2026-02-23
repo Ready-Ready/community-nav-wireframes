@@ -30,13 +30,25 @@
         const repo = 'community-nav-wireframes';
         const branch = 'main'; 
 
+        // Security: Escape HTML entities to prevent XSS attacks
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
         async function loadTree() {
             try {
                 const url = `https://api.github.com/repos/${username}/${repo}/git/trees/${branch}?recursive=1`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                if (!response.ok) throw new Error(data.message);
+                if (!response.ok) throw new Error('Unable to load repository tree');
 
                 const treeContainer = document.getElementById('tree-container');
                 treeContainer.innerHTML = '';
@@ -61,17 +73,19 @@
                         if (key.startsWith('.') || key.toLowerCase().includes('readme') || key.toLowerCase().includes('instructions')) continue;
 
                         const fullPath = path + key;
+                        const escapedKey = escapeHtml(key);
+                        const escapedPath = escapeHtml(fullPath);
 
                         if (typeof obj[key] === 'string') {
                             // Render as a File link
                             if (key.endsWith('.html')) {
-                                html += `<div class="file">📄 <a href="${fullPath}">${key}</a></div>`;
+                                html += `<div class="file">📄 <a href="${escapedPath}">${escapedKey}</a></div>`;
                             }
                         } else {
                             // Render as a Folder (Collapsible arrow + Clickable Name)
                             html += `<details open>
                                         <summary>
-                                            <a class="folder-link" href="${fullPath}/">${key}</a>
+                                            <a class="folder-link" href="${escapedPath}/">${escapedKey}</a>
                                         </summary>
                                         ${render(obj[key], fullPath + '/')}
                                      </details>`;
@@ -83,7 +97,8 @@
                 treeContainer.innerHTML = render(structure);
 
             } catch (err) {
-                document.getElementById('tree-container').innerHTML = '<p style="color:red">Error: ' + err.message + '</p>';
+                // Security: Don't expose error details to user
+                document.getElementById('tree-container').innerHTML = '<p style="color:red">Error loading wireframe directory. Please try again later.</p>';
             }
         }
         loadTree();
